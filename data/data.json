@@ -1,0 +1,9 @@
+{
+  "transactions": [
+    {"id": "1", "date": "2025-05-21", "amount": 50, "description": "Groceries", "category": "Food"}
+  ],
+  "budget": {
+    "monthly_limit": 1000,
+    "total_budget": 20000
+  }
+}
