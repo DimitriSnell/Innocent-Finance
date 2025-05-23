@@ -16,13 +16,21 @@ type Budget struct {
 type Data struct {
 	Transactions []Transaction `json:"transactions"`
 	Budget       Budget        `json:"budget"`
+	SyncToken    int64         `json:"sync_token"`
+}
+
+type Changes struct {
+	AddedTransactions    []Transaction `json:"addedTransactions,omitempty"`
+	DeletedTransactions  []Transaction `json:"deletedTransactions,omitempty"`
+	ReplacedTransactions []Transaction `json:"replacedTransactions,omitempty"`
 }
 
 type Account struct {
-	data Data
+	data    Data
+	changes Changes
 }
 
 func newAccount(d Data) *Account {
-	a := Account{d}
+	a := Account{d, Changes{}}
 	return &a
 }

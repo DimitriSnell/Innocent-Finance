@@ -15,7 +15,10 @@ var (
 
 func serverInit() {
 	http.HandleFunc("/data", handleData)
+	http.HandleFunc("/sync-token", syncTokenHandler)
 	//http.HandleFunc("/add", handleAddTransaction)
+	http.HandleFunc("/push", handleSync)
+	http.HandleFunc("/pull-changes", handlePull)
 	fmt.Println("listening on port 8080")
 	http.ListenAndServe(":8080", nil)
 }
@@ -43,4 +46,70 @@ func handleData(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(a.data)
+}
+
+// returns sync token to client
+func syncTokenHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("sync token handler")
+	if r.Method != http.MethodGet {
+		http.Error(w, "Only GET allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(a.data.SyncToken)
+}
+
+func handleSync(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("sync handler")
+	if r.Method != http.MethodPost {
+		http.Error(w, "only POST allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	var changes Changes
+	err := json.NewDecoder(r.Body).Decode(&changes)
+	if err != nil {
+		http.Error(w, "Error decoding json", http.StatusBadRequest)
+		return
+	}
+	//add changes from client and increment then return syncToken
+	for _, v := range changes.AddedTransactions {
+		a.data.Transactions = append(a.data.Transactions, v)
+		a.data.SyncToken++
+	}
+	writeDataToFile(a.data, dataFile)
+	json.NewEncoder(w).Encode(a.data.SyncToken)
+}
+
+func writeDataToFile(data Data, filename string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(data)
+}
+
+func handlePull(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Only GET allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(a.changes)
+
 }
