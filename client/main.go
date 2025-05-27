@@ -26,6 +26,7 @@ func main() {
 	fmt.Println(a.CheckServerSync())
 	a.SyncServer()
 	UI := ui.NewUIApp(a)
+	UI.LoadDataIntoUI()
 	UI.ResizeWindow(500, 500)
 	UI.StartApp()
 	err = account.DestroyDataFile(pathToFile)
