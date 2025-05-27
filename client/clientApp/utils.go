@@ -1,11 +1,12 @@
-package account
+package clientapp
 
 import (
+	"client/account"
 	"encoding/json"
 	"os"
 )
 
-func WriteDataToFile(data Data, filename string) error {
+func WriteDataToFile(data account.Data, filename string) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		return err

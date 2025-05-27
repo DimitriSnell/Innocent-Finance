@@ -131,20 +131,27 @@ func (ui *UIApp) LoadDataIntoUI() {
 		fmt.Println("test?")
 	}
 	fmt.Println(list.Size().Width)
-	//list.Resize(fyne.NewSize(list.Size().Width, 500))
-	//test := container.New(layout.NewVBoxLayout(), header, list)
+	//vscroll first is necessary for some reason
 	content := container.NewVScroll(list)
-	content.SetMinSize(fyne.NewSize(0, 200))
+	content.SetMinSize(fyne.NewSize(200, 200))
 	fixedHeightContainer := container.NewVBox(header, content)
-	//fixedHeightContainer.MinSize(fyne.NewSize(0, 500))
-	//content.Resize(fyne.NewSize(content.Size().Width, 500))
-	fmt.Println(content)
-	//ui.fyneWindow.SetContent(fixedHeightContainer)
-	rect := canvas.NewRectangle(color.Transparent)
-	wrapped := NewRightClickLabel(rect, func() {
-		fmt.Println("Right click detected on window!")
-	})
+	//rect := canvas.NewRectangle(color.Transparent)
+	//wrapped := NewRightClickLabel(rect, func() {
+	//	fmt.Println("Right click detected on window!")
+	//})
+	minWidthRect := canvas.NewRectangle(color.Transparent)
+	minWidthRect.SetMinSize(fyne.NewSize(250, 10)) // 300px wide, 10px tall
+	leftPanel := container.NewVBox(
+		minWidthRect,
+		widget.NewLabel("Left Panel"),
+		layout.NewSpacer(), // This makes the left panel expand to fill available space
+	)
+	// Create split container
 
-	allin := container.NewStack(wrapped, fixedHeightContainer)
-	ui.fyneWindow.SetContent(allin)
+	split := container.NewHSplit(leftPanel, fixedHeightContainer)
+	split.SetOffset(0.2)
+	split.Refresh()
+	//allin := container.NewStack(wrapped, split)
+	ui.fyneWindow.Resize(fyne.NewSize(900, 600)) // Make sure window is big enough
+	ui.fyneWindow.SetContent(split)
 }

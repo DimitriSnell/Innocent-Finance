@@ -1,8 +1,7 @@
 package main
 
 import (
-	ui "client/UI"
-	"client/account"
+	clientapp "client/clientApp"
 	"fmt"
 )
 
@@ -10,7 +9,7 @@ var pathToFile = "./data/data.json"
 
 func main() {
 	fmt.Println("hello world")
-	a, err := account.NewAccount()
+	/*a, err := account.NewAccount()
 	if err != nil {
 		fmt.Println("Error creating account:", err)
 		return
@@ -20,20 +19,27 @@ func main() {
 	if err != nil {
 		fmt.Println("Error writing data to file:", err)
 		return
+	}*/
+	client, err := clientapp.NewClient()
+	if err != nil {
+		fmt.Println("Error creating account:", err)
+		return
 	}
-	fmt.Println(a.CheckServerSync())
+
+	fmt.Println(client)
+	fmt.Println(client.CheckServerSync())
 	//a.appendTransaction(newTransaction("2023-10-01", "Test Transaction", 100, "Test Category"))
-	fmt.Println(a.CheckServerSync())
-	a.SyncServer()
-	UI := ui.NewUIApp(a)
-	UI.LoadDataIntoUI()
-	UI.ResizeWindow(500, 500)
-	UI.StartApp()
-	err = account.DestroyDataFile(pathToFile)
+	fmt.Println(client.CheckServerSync())
+	client.SyncServer()
+	//UI := ui.NewUIApp(a)
+	client.GetUI().LoadDataIntoUI()
+	client.GetUI().ResizeWindow(500, 500)
+	client.GetUI().StartApp()
+	err = clientapp.DestroyDataFile(pathToFile)
 	if err != nil {
 		fmt.Println("Error destroying data file:", err)
 		return
 	}
 
-	fmt.Println(a)
+	//fmt.Println(a)
 }
