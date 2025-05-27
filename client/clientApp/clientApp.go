@@ -10,13 +10,15 @@ import (
 )
 
 type Client struct {
-	a  *account.Account
-	ui *ui.UIApp
+	a     *account.Account
+	ui    *ui.UIApp
+	token string
 }
 
 func NewClient() (*Client, error) {
 	result := Client{}
-	data, err := loadDataFromServer[account.Data]("http://localhost:8080/data")
+	result.token = "1234"
+	data, err := loadDataFromServer[account.Data]("http://localhost:8080/data", &result)
 	if err != nil {
 		return &result, err
 	}
@@ -33,13 +35,29 @@ func (c *Client) GetUI() *ui.UIApp {
 	return c.ui
 }
 
+func (c *Client) GetAccount() *account.Account {
+	return c.a
+}
+
 func (c *Client) CheckServerSync() (bool, error) {
-	resp, err := http.Get("http://localhost:8080/sync-token")
+	req, err := http.NewRequest("GET", "http://localhost:8080/sync-token", nil)
+	if err != nil {
+		fmt.Println("Error creating request", err)
+		return false, err
+	}
+	req.Header.Set("Authorization-Token", c.token)
+
+	client := &http.Client{}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println("Error loading data from server when checking sync", err)
 		return false, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusUnauthorized {
+		return false, fmt.Errorf("unauthorized")
+	}
 	if resp.StatusCode != http.StatusOK {
 		fmt.Println("Error loading data from server when checking sync", resp.Status)
 		return false, nil
@@ -82,6 +100,7 @@ func (c *Client) pushToSync(data account.Data, changes account.Changes) (account
 	if err != nil {
 		return account.Data{}, err
 	}
+	//TODO add authorization to POST request
 	resp, err := http.Post("http://localhost:8080/push", "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		fmt.Println("error pushing data to server")
@@ -103,11 +122,11 @@ func (c *Client) pushToSync(data account.Data, changes account.Changes) (account
 }
 
 func (c *Client) PullToSync(data account.Data) (account.Data, error) {
-	dataFromServer, err := loadDataFromServer[account.Changes]("http://localhost:8080/pull-changes")
+	dataFromServer, err := loadDataFromServer[account.Changes]("http://localhost:8080/pull-changes", c)
 	if err != nil {
 		return account.Data{}, err
 	}
-	updatedSyncToken, err := loadDataFromServer[int64]("http://localhost:8080/sync-token")
+	updatedSyncToken, err := loadDataFromServer[int64]("http://localhost:8080/sync-token", c)
 	if err != nil {
 		return account.Data{}, err
 	}
@@ -121,15 +140,31 @@ func (c *Client) PullToSync(data account.Data) (account.Data, error) {
 	return result, nil
 }
 
-func loadDataFromServer[T any](url string) (T, error) {
+func loadDataFromServer[T any](url string, c *Client) (T, error) {
 	var result T
-	resp, err := http.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		fmt.Println("Error creating request", err)
+		return result, err
+	}
+	req.Header.Set("Authorization-Token", c.token)
+
+	client := &http.Client{}
+
+	resp, err := client.Do(req)
+
+	//resp, err := http.Get(url)
 
 	if err != nil {
 		return result, err
 	}
 	defer resp.Body.Close()
 	fmt.Println("response status:", resp.Status)
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		return result, fmt.Errorf("unauthorized")
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		return result, fmt.Errorf("failed to load data: %s", resp.Status)
 	}

@@ -14,7 +14,8 @@ var (
 )
 
 func serverInit() {
-	http.HandleFunc("/data", handleData)
+	dataHandler := http.HandlerFunc(handleData)
+	http.Handle("/data", authenticationMiddleware(dataHandler))
 	http.HandleFunc("/sync-token", syncTokenHandler)
 	//http.HandleFunc("/add", handleAddTransaction)
 	http.HandleFunc("/push", handleSync)

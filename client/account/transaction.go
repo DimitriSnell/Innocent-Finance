@@ -10,7 +10,7 @@ type Transaction struct {
 	Category    string `json:"category"`
 }
 
-func newTransaction(date, description string, amount int64, category string) Transaction {
+func NewTransaction(date, description string, amount int64, category string) Transaction {
 	id := generateID()
 	return Transaction{
 		ID:          id,

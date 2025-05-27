@@ -1,6 +1,7 @@
 package main
 
 import (
+	"client/account"
 	clientapp "client/clientApp"
 	"fmt"
 )
@@ -23,12 +24,15 @@ func main() {
 	client, err := clientapp.NewClient()
 	if err != nil {
 		fmt.Println("Error creating account:", err)
+		if err.Error() == "unauthorized" {
+			fmt.Println("unauthorized detected")
+		}
 		return
 	}
 
 	fmt.Println(client)
 	fmt.Println(client.CheckServerSync())
-	//a.appendTransaction(newTransaction("2023-10-01", "Test Transaction", 100, "Test Category"))
+	client.GetAccount().AppendTransaction(account.NewTransaction("2023-10-01", "Test Transaction", 100, "Test Category"))
 	fmt.Println(client.CheckServerSync())
 	client.SyncServer()
 	//UI := ui.NewUIApp(a)
