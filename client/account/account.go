@@ -1,4 +1,4 @@
-package main
+package account
 
 import (
 	"bytes"
@@ -29,7 +29,7 @@ type Changes struct {
 	ReplacedTransactions []Transaction `json:"replacedTransactions,omitempty"`
 }
 
-func newAccount() (*Account, error) {
+func NewAccount() (*Account, error) {
 	a := Account{}
 	d, err := loadDataFromServer[Data]("http://localhost:8080/data")
 	if err != nil {
@@ -40,7 +40,7 @@ func newAccount() (*Account, error) {
 	return &a, nil
 }
 
-func (a *Account) appendTransaction(t Transaction) {
+func (a *Account) AppendTransaction(t Transaction) {
 	a.data.Transactions = append(a.data.Transactions, t)
 	a.changes.AddedTransactions = append(a.changes.AddedTransactions, t)
 }
@@ -65,7 +65,11 @@ func loadDataFromServer[T any](url string) (T, error) {
 	return result, nil
 }
 
-func (a *Account) checkServerSync() (bool, error) {
+func (a *Account) GetData() Data {
+	return a.data
+}
+
+func (a *Account) CheckServerSync() (bool, error) {
 	resp, err := http.Get("http://localhost:8080/sync-token")
 	if err != nil {
 		fmt.Println("Error loading data from server when checking sync", err)
@@ -88,7 +92,7 @@ func (a *Account) checkServerSync() (bool, error) {
 	return true, nil
 }
 
-func (a *Account) syncServer() error {
+func (a *Account) SyncServer() error {
 	//pulls and saves any updated data from the server then adds and
 	// pushes changes to server NOTE: does not POST full data only POSTS changes
 	updatedServerData, err := PullToSync(a.data)
@@ -97,7 +101,8 @@ func (a *Account) syncServer() error {
 		return err
 	}
 	a.data = updatedServerData
-	writeDataToFile(a.data, "data/data.json")
+
+	WriteDataToFile(a.data, "data/data.json")
 	return nil
 }
 
