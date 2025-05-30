@@ -1,4 +1,4 @@
-package ui
+package UI
 
 import (
 	"client/account"
@@ -67,7 +67,8 @@ func (ui *UIApp) StartApp() {
 
 func (ui *UIApp) LoadDataIntoUI() {
 	transactionList := ui.accountI.GetData().Transactions
-
+	fmt.Println("length")
+	fmt.Println(len(transactionList))
 	header := container.NewGridWithColumns(9,
 		layout.NewSpacer(),
 		widget.NewLabelWithStyle("Category", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),

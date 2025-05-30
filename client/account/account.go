@@ -38,10 +38,18 @@ func (a *Account) GetData() Data {
 	return a.data
 }
 
+func (a *Account) SetSyncToken(st int64) {
+	a.data.SyncToken = st
+}
+
 func (a *Account) SetData(d Data) {
 	a.data = d
 }
 
 func (a *Account) GetChanges() Changes {
 	return a.changes
+}
+
+func (a *Account) SetTransactionData(Tlist []Transaction) {
+	a.data.Transactions = Tlist
 }

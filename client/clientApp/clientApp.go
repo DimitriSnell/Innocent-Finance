@@ -4,20 +4,26 @@ import (
 	"bytes"
 	ui "client/UI"
 	"client/account"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type Client struct {
 	a     *account.Account
 	ui    *ui.UIApp
 	token string
+	db    *sql.DB
 }
 
 func NewClient() (*Client, error) {
 	result := Client{}
 	result.token = "1234"
+	//TODO: here is where data is initally stored in memory eventually make it so only partial amounts of data and stored and the rest
+	//TODO: is only put in the local database
 	data, err := loadDataFromServer[account.Data]("http://localhost:8080/data", &result)
 	if err != nil {
 		return &result, err
@@ -28,9 +34,34 @@ func NewClient() (*Client, error) {
 	}
 	result.a = a
 	result.ui = ui.NewUIApp(a)
+	err = result.initDatabase()
+	if err != nil {
+		return &result, err
+	}
 	return &result, nil
 }
 
+func (c *Client) AddTransactions(transactionList []account.Transaction) error {
+	stmt, err := c.db.Prepare("INSERT INTO transactions(id, date, description, amount, category) VALUES (?,?,?,?,?)")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	for _, t := range transactionList {
+		_, err := stmt.Exec(t.ID, t.Date, t.Description, t.Amount, t.Category)
+		c.a.AppendTransaction(t)
+		fmt.Println("adding", t)
+		if err != nil {
+			return err
+		}
+	}
+	for _, t := range c.GetAccount().GetData().Transactions {
+		fmt.Println(t)
+	}
+	fmt.Println("len1")
+	fmt.Println(len(c.GetAccount().GetData().Transactions))
+	return nil
+}
 func (c *Client) GetUI() *ui.UIApp {
 	return c.ui
 }
@@ -77,6 +108,7 @@ func (c *Client) CheckServerSync() (bool, error) {
 func (c *Client) SyncServer() error {
 	//pulls and saves any updated data from the server then adds and
 	// pushes changes to server NOTE: does not POST full data only POSTS changes
+	//TODO potentially remove Data from return of pull/pushToSync
 	updatedServerData, err := c.PullToSync(c.a.GetData())
 	if err != nil {
 		return err
@@ -85,7 +117,7 @@ func (c *Client) SyncServer() error {
 	if err != nil {
 		return err
 	}
-	c.a.SetData(updatedServerData)
+	//c.a.SetData(updatedServerData)
 
 	WriteDataToFile(c.a.GetData(), "data/data.json")
 	return nil
@@ -93,9 +125,6 @@ func (c *Client) SyncServer() error {
 
 func (c *Client) pushToSync(data account.Data, changes account.Changes) (account.Data, error) {
 	result := data
-	for _, v := range changes.AddedTransactions {
-		result.Transactions = append(result.Transactions, v)
-	}
 	jsonData, err := json.Marshal(changes)
 	if err != nil {
 		return account.Data{}, err
@@ -116,7 +145,7 @@ func (c *Client) pushToSync(data account.Data, changes account.Changes) (account
 		fmt.Println("Error decoding sync token from server", err)
 		return account.Data{}, err
 	}
-	result.SyncToken = st
+	c.a.SetSyncToken(st)
 	fmt.Println(result.SyncToken)
 	return result, nil
 }
@@ -134,9 +163,8 @@ func (c *Client) PullToSync(data account.Data) (account.Data, error) {
 		return data, nil
 	}
 	result := data
-	for _, v := range dataFromServer.AddedTransactions {
-		result.Transactions = append(result.Transactions, v)
-	}
+	//adds added transactions from the server to memory and data
+	c.AddTransactions(dataFromServer.AddedTransactions)
 	return result, nil
 }
 

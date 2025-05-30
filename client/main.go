@@ -32,10 +32,24 @@ func main() {
 
 	fmt.Println(client)
 	fmt.Println(client.CheckServerSync())
-	client.GetAccount().AppendTransaction(account.NewTransaction("2023-10-01", "Test Transaction", 100, "Test Category"))
+	Tlist := []account.Transaction{}
+	Tlist = append(Tlist, account.NewTransaction("2023-10-01", "Test Transaction345345", 6030, "Test Category"))
+	client.AddTransactions(Tlist)
 	fmt.Println(client.CheckServerSync())
 	client.SyncServer()
 	//UI := ui.NewUIApp(a)
+	info := clientapp.TransactionFilterInfo{
+		ID:          "",
+		Date:        "",
+		Description: "",
+		Amount:      100,
+		Category:    "",
+	}
+	err = client.QueryTransactionsAndUpdate(info)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	client.GetUI().LoadDataIntoUI()
 	client.GetUI().ResizeWindow(500, 500)
 	client.GetUI().StartApp()

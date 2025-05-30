@@ -5,6 +5,7 @@ go 1.21.1
 require (
 	fyne.io/fyne/v2 v2.6.1
 	github.com/google/uuid v1.6.0
+	github.com/mattn/go-sqlite3 v1.14.28
 )
 
 require (
