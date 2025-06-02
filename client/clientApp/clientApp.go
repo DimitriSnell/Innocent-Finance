@@ -22,7 +22,7 @@ type Client struct {
 func NewClient() (*Client, error) {
 	result := Client{}
 	result.token = "1234"
-	//TODO: here is where data is initally stored in memory eventually make it so only partial amounts of data and stored and the rest
+	//TODO: here is where data is initally stored in memory eventually make it so only partial amounts of data and stored in memory (for lazy loading) and the rest
 	//TODO: is only put in the local database
 	data, err := loadDataFromServer[account.Data]("http://localhost:8080/data", &result)
 	if err != nil {
@@ -41,6 +41,25 @@ func NewClient() (*Client, error) {
 	return &result, nil
 }
 
+func (c *Client) DeleteTransactions(transactionList []account.Transaction) error {
+	stmt, err := c.db.Prepare("DELETE FROM transactions WHERE id = ?")
+	if err != nil {
+		return err
+	}
+
+	defer stmt.Close()
+	fmt.Println("IN DELETE TRANSACTION")
+	for _, t := range transactionList {
+		_, err := stmt.Exec(t.ID)
+		if err != nil {
+			return err
+		}
+		fmt.Println("IN DELETE TRANSACTION2")
+		c.a.DeleteTransactionFromMemory(t)
+	}
+	return nil
+}
+
 func (c *Client) AddTransactions(transactionList []account.Transaction) error {
 	stmt, err := c.db.Prepare("INSERT INTO transactions(id, date, description, amount, category) VALUES (?,?,?,?,?)")
 	if err != nil {
@@ -49,19 +68,17 @@ func (c *Client) AddTransactions(transactionList []account.Transaction) error {
 	defer stmt.Close()
 	for _, t := range transactionList {
 		_, err := stmt.Exec(t.ID, t.Date, t.Description, t.Amount, t.Category)
-		c.a.AppendTransaction(t)
-		fmt.Println("adding", t)
 		if err != nil {
 			return err
 		}
+		c.a.AppendTransaction(t)
 	}
 	for _, t := range c.GetAccount().GetData().Transactions {
 		fmt.Println(t)
 	}
-	fmt.Println("len1")
-	fmt.Println(len(c.GetAccount().GetData().Transactions))
 	return nil
 }
+
 func (c *Client) GetUI() *ui.UIApp {
 	return c.ui
 }
@@ -107,7 +124,7 @@ func (c *Client) CheckServerSync() (bool, error) {
 
 func (c *Client) SyncServer() error {
 	//pulls and saves any updated data from the server then adds and
-	// pushes changes to server NOTE: does not POST full data only POSTS changes
+	//pushes changes to server NOTE: does not POST full data only POSTS changes
 	//TODO potentially remove Data from return of pull/pushToSync
 	updatedServerData, err := c.PullToSync(c.a.GetData())
 	if err != nil {
@@ -145,8 +162,9 @@ func (c *Client) pushToSync(data account.Data, changes account.Changes) (account
 		fmt.Println("Error decoding sync token from server", err)
 		return account.Data{}, err
 	}
+	fmt.Println("SERVER SYNCTOKEN: ", result.SyncToken)
 	c.a.SetSyncToken(st)
-	fmt.Println(result.SyncToken)
+	fmt.Println("CLIENT SYNCTOKEN: ", result.SyncToken)
 	return result, nil
 }
 
@@ -163,7 +181,7 @@ func (c *Client) PullToSync(data account.Data) (account.Data, error) {
 		return data, nil
 	}
 	result := data
-	//adds added transactions from the server to memory and data
+	//adds added changed transactions from the server to memory and data
 	c.AddTransactions(dataFromServer.AddedTransactions)
 	return result, nil
 }

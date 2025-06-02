@@ -29,6 +29,16 @@ func NewAccount(d Data) (*Account, error) {
 	return &a, nil
 }
 
+func (a *Account) DeleteTransactionFromMemory(t Transaction) {
+	a.changes.DeletedTransactions = append(a.changes.DeletedTransactions, t)
+	idx := FindIndexByID(t.ID, a.GetData().Transactions)
+	if idx == -1 {
+		return
+	}
+	newList := append(a.GetData().Transactions[:idx], a.GetData().Transactions[idx+1:]...)
+	a.SetTransactionData(newList)
+}
+
 func (a *Account) AppendTransaction(t Transaction) {
 	a.data.Transactions = append(a.data.Transactions, t)
 	a.changes.AddedTransactions = append(a.changes.AddedTransactions, t)

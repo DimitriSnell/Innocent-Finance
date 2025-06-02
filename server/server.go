@@ -85,6 +85,16 @@ func handleSync(w http.ResponseWriter, r *http.Request) {
 		a.data.Transactions = append(a.data.Transactions, v)
 		a.data.SyncToken++
 	}
+	for _, v := range changes.DeletedTransactions {
+		idx := FindIndexByID(v.ID, a.data.Transactions)
+		fmt.Println(idx)
+		if idx == -1 {
+			break
+		}
+		newList := append(a.data.Transactions[:idx], a.data.Transactions[idx+1:]...)
+		a.data.Transactions = newList
+		a.data.SyncToken++
+	}
 	writeDataToFile(a.data, dataFile)
 	json.NewEncoder(w).Encode(a.data.SyncToken)
 }

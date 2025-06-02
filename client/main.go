@@ -35,6 +35,15 @@ func main() {
 	Tlist := []account.Transaction{}
 	Tlist = append(Tlist, account.NewTransaction("2023-10-01", "Test Transaction345345", 6030, "Test Category"))
 	client.AddTransactions(Tlist)
+	DeleteList := []account.Transaction{}
+	toDelete, err := clientapp.QueryTransactionByUID("9a908847-7d77-4e67-ae63-c433d7449c9f")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println("TO DELETE ID", toDelete.ID)
+	DeleteList = append(DeleteList, toDelete)
+	client.DeleteTransactions(DeleteList)
 	fmt.Println(client.CheckServerSync())
 	client.SyncServer()
 	//UI := ui.NewUIApp(a)

@@ -1,21 +1,7 @@
 {
   "transactions": [
     {
-      "id": "1",
-      "date": "2025-05-21",
-      "description": "Groceries",
-      "amount": 50,
-      "category": "Food"
-    },
-    {
       "id": "4b7a5003-28d7-47f2-a293-0be4eecb26fa",
-      "date": "2023-10-01",
-      "description": "Test Transaction",
-      "amount": 100,
-      "category": "Test Category"
-    },
-    {
-      "id": "9a908847-7d77-4e67-ae63-c433d7449c9f",
       "date": "2023-10-01",
       "description": "Test Transaction",
       "amount": 100,
@@ -162,13 +148,6 @@
       "category": "Test Category"
     },
     {
-      "id": "463d96b9-4a79-4c13-a2cb-ab4babc89f38",
-      "date": "2023-10-01",
-      "description": "Test Transaction345345",
-      "amount": 600,
-      "category": "Test Category"
-    },
-    {
       "id": "3266248f-86c9-4036-a98c-69e02261bf6c",
       "date": "2023-10-01",
       "description": "Test Transaction345345",
@@ -216,11 +195,60 @@
       "description": "Test Transaction345345",
       "amount": 6030,
       "category": "Test Category"
+    },
+    {
+      "id": "dc4d03e2-5b6c-4590-811a-8b134d050290",
+      "date": "2023-10-01",
+      "description": "Test Transaction345345",
+      "amount": 6030,
+      "category": "Test Category"
+    },
+    {
+      "id": "cf17482b-eb13-4886-88cb-4ed9b65cca90",
+      "date": "2023-10-01",
+      "description": "Test Transaction345345",
+      "amount": 6030,
+      "category": "Test Category"
+    },
+    {
+      "id": "a89757ee-6822-4d8f-8cca-f624ff518f99",
+      "date": "2023-10-01",
+      "description": "Test Transaction345345",
+      "amount": 6030,
+      "category": "Test Category"
+    },
+    {
+      "id": "898d878d-9f3c-492d-91e8-dadea2a796d7",
+      "date": "2023-10-01",
+      "description": "Test Transaction345345",
+      "amount": 6030,
+      "category": "Test Category"
+    },
+    {
+      "id": "51870f8c-3a0b-4452-96fc-af534064d6c4",
+      "date": "2023-10-01",
+      "description": "Test Transaction345345",
+      "amount": 6030,
+      "category": "Test Category"
+    },
+    {
+      "id": "bec52809-e5d9-46c2-be88-956f4783da9d",
+      "date": "2023-10-01",
+      "description": "Test Transaction345345",
+      "amount": 6030,
+      "category": "Test Category"
+    },
+    {
+      "id": "d764cb60-d971-4ffd-a68f-384d2099c967",
+      "date": "2023-10-01",
+      "description": "Test Transaction345345",
+      "amount": 6030,
+      "category": "Test Category"
     }
   ],
   "budget": {
     "monthly_limit": 1000,
     "total_budget": 20000
   },
-  "sync_token": 30
+  "sync_token": 40
 }
