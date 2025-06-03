@@ -1,6 +1,7 @@
 package main
 
 import (
+	DB "client/DB"
 	"client/account"
 	clientapp "client/clientApp"
 	"fmt"
@@ -36,7 +37,7 @@ func main() {
 	Tlist = append(Tlist, account.NewTransaction("2023-10-01", "Test Transaction345345", 6030, "Test Category"))
 	client.AddTransactions(Tlist)
 	DeleteList := []account.Transaction{}
-	toDelete, err := clientapp.QueryTransactionByUID("9a908847-7d77-4e67-ae63-c433d7449c9f")
+	toDelete, err := DB.QueryTransactionByUID("9a908847-7d77-4e67-ae63-c433d7449c9f")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -47,7 +48,7 @@ func main() {
 	fmt.Println(client.CheckServerSync())
 	client.SyncServer()
 	//UI := ui.NewUIApp(a)
-	info := clientapp.TransactionFilterInfo{
+	info := DB.TransactionFilterInfo{
 		ID:          "",
 		Date:        "",
 		Description: "",

@@ -1,4 +1,4 @@
-package clientapp
+package DB
 
 import (
 	"client/account"
@@ -15,11 +15,10 @@ type TransactionFilterInfo struct {
 	Category    string
 }
 
-func (c *Client) initDatabase() error {
+func InitDatabase(data account.Data) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", "file:transactions.db?cache=shared&mode=rwc")
-	c.db = db
 	if err != nil {
-		return err
+		return nil, err
 	}
 	createTableSQL := `
     CREATE TABLE IF NOT EXISTS transactions (
@@ -32,15 +31,11 @@ func (c *Client) initDatabase() error {
 
 	_, err = db.Exec(createTableSQL)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	data, err := loadDataFromServer[account.Data]("http://localhost:8080/data", c)
-	if err != nil {
-		return err
-	}
-	err = SaveDataToDB(c.db, data)
-	return err
+	err = SaveDataToDB(db, data)
+	return db, err
 }
 
 // THIS FUNCTION IS ONLY USED ON SERVER STARTUP AS IT DELETES ALL DATA IN DATABASE AND CREATES A NEW DATABASE FROM THE DATA ARGUMENT
@@ -140,7 +135,9 @@ func QueryTransaction(info TransactionFilterInfo) ([]account.Transaction, error)
 	}
 	//TODO: make it so amount can be greater less than or equal to
 	query := `SELECT id, date, description, amount, category FROM transactions `
-	query += "WHERE " + strings.Join(filters2, " AND ")
+	if len(filters2) > 0 {
+		query += "WHERE " + strings.Join(filters2, " AND ")
+	}
 
 	rows, err := db.Query(query, filters...)
 	if err != nil {
@@ -158,58 +155,4 @@ func QueryTransaction(info TransactionFilterInfo) ([]account.Transaction, error)
 		result = append(result, t)
 	}
 	return result, nil
-}
-
-func (c *Client) QueryTransactionsAndUpdate(info TransactionFilterInfo) error {
-	db, err := sql.Open("sqlite3", "file:transactions.db?cache=shared&mode=rwc")
-	if err != nil {
-		return err
-	}
-	var filters []interface{}
-	var filters2 []string
-
-	if info.ID != "" {
-		filters2 = append(filters2, "id = ?")
-		filters = append(filters, info.ID)
-	}
-	if info.Date != "" {
-		filters2 = append(filters2, "date = ?")
-		filters = append(filters, info.Date)
-	}
-	if info.Description != "" {
-		filters2 = append(filters2, "description = ?")
-		filters = append(filters, info.Description)
-	}
-	if info.Amount != 0 {
-		filters2 = append(filters2, "amount = ?")
-		filters = append(filters, info.Amount)
-	}
-	if info.Category != "" {
-		filters2 = append(filters2, "category = ?")
-		filters = append(filters, info.Category)
-	}
-	//TODO: make it so amount can be greater less than or equal to
-	query := `SELECT id, date, description, amount, category FROM transactions `
-	query += "WHERE " + strings.Join(filters2, " AND ")
-
-	rows, err := db.Query(query, filters...)
-	if err != nil {
-		return err
-	}
-	var NewTransactionList []account.Transaction
-	for rows.Next() {
-		var id string
-		var date string
-		var description string
-		var amount int64
-		var category string
-
-		rows.Scan(&id, &date, &description, &amount, &category)
-		t := account.NewTransaction(date, description, amount, category)
-		NewTransactionList = append(NewTransactionList, t)
-	}
-	fmt.Println("NEW TRANSACTION LIST")
-	fmt.Println(NewTransactionList)
-	c.a.SetTransactionData(NewTransactionList)
-	return nil
 }

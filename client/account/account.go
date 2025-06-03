@@ -29,6 +29,7 @@ func NewAccount(d Data) (*Account, error) {
 	return &a, nil
 }
 
+// Add transaction to deleted transactions list even if its not found in memory if the transaction id exists nowhere then the server will just ignore it
 func (a *Account) DeleteTransactionFromMemory(t Transaction) {
 	a.changes.DeletedTransactions = append(a.changes.DeletedTransactions, t)
 	idx := FindIndexByID(t.ID, a.GetData().Transactions)

@@ -2,12 +2,14 @@ package clientapp
 
 import (
 	"bytes"
+	DB "client/DB"
 	ui "client/UI"
 	"client/account"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -34,10 +36,11 @@ func NewClient() (*Client, error) {
 	}
 	result.a = a
 	result.ui = ui.NewUIApp(a)
-	err = result.initDatabase()
+	tempDb, err := DB.InitDatabase(data)
 	if err != nil {
 		return &result, err
 	}
+	result.db = tempDb
 	return &result, nil
 }
 
@@ -162,9 +165,7 @@ func (c *Client) pushToSync(data account.Data, changes account.Changes) (account
 		fmt.Println("Error decoding sync token from server", err)
 		return account.Data{}, err
 	}
-	fmt.Println("SERVER SYNCTOKEN: ", result.SyncToken)
 	c.a.SetSyncToken(st)
-	fmt.Println("CLIENT SYNCTOKEN: ", result.SyncToken)
 	return result, nil
 }
 
@@ -220,4 +221,58 @@ func loadDataFromServer[T any](url string, c *Client) (T, error) {
 	}
 
 	return result, nil
+}
+
+func (c *Client) QueryTransactionsAndUpdate(info DB.TransactionFilterInfo) error {
+	db, err := sql.Open("sqlite3", "file:transactions.db?cache=shared&mode=rwc")
+	if err != nil {
+		return err
+	}
+	var filters []interface{}
+	var filters2 []string
+
+	if info.ID != "" {
+		filters2 = append(filters2, "id = ?")
+		filters = append(filters, info.ID)
+	}
+	if info.Date != "" {
+		filters2 = append(filters2, "date = ?")
+		filters = append(filters, info.Date)
+	}
+	if info.Description != "" {
+		filters2 = append(filters2, "description = ?")
+		filters = append(filters, info.Description)
+	}
+	if info.Amount != 0 {
+		filters2 = append(filters2, "amount = ?")
+		filters = append(filters, info.Amount)
+	}
+	if info.Category != "" {
+		filters2 = append(filters2, "category = ?")
+		filters = append(filters, info.Category)
+	}
+	//TODO: make it so amount can be greater less than or equal to
+	query := `SELECT id, date, description, amount, category FROM transactions `
+	query += "WHERE " + strings.Join(filters2, " AND ")
+
+	rows, err := db.Query(query, filters...)
+	if err != nil {
+		return err
+	}
+	var NewTransactionList []account.Transaction
+	for rows.Next() {
+		var id string
+		var date string
+		var description string
+		var amount int64
+		var category string
+
+		rows.Scan(&id, &date, &description, &amount, &category)
+		t := account.NewTransaction(date, description, amount, category)
+		NewTransactionList = append(NewTransactionList, t)
+	}
+	fmt.Println("NEW TRANSACTION LIST")
+	fmt.Println(NewTransactionList)
+	c.a.SetTransactionData(NewTransactionList)
+	return nil
 }
