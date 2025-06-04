@@ -10,6 +10,8 @@ import (
 type TransactionFilterInfo struct {
 	ID          string
 	Date        string
+	DateOp      string
+	SecondDate  string
 	Description string
 	Amount      *int64
 	Op          string
@@ -119,8 +121,17 @@ func QueryTransaction(info TransactionFilterInfo) ([]account.Transaction, error)
 		filters = append(filters, info.ID)
 	}
 	if info.Date != "" {
-		filters2 = append(filters2, "date LIKE ?")
-		filters = append(filters, "%"+info.Date+"%")
+		if info.DateOp == "" || info.DateOp == "Like" {
+			fmt.Println(info.Date, info.DateOp, info.SecondDate)
+			filters2 = append(filters2, "date LIKE ?")
+			filters = append(filters, "%"+info.Date+"%")
+		} else if info.DateOp != "Between" {
+			filters2 = append(filters2, "date "+info.DateOp+" ?")
+			filters = append(filters, info.Date)
+		} else {
+			filters2 = append(filters2, "date >= ? AND date <= ?")
+			filters = append(filters, info.Date, info.SecondDate)
+		}
 	}
 	if info.Description != "" {
 		filters2 = append(filters2, "description LIKE ?")
@@ -144,7 +155,7 @@ func QueryTransaction(info TransactionFilterInfo) ([]account.Transaction, error)
 	if len(filters2) > 0 {
 		query += "WHERE " + strings.Join(filters2, " AND ")
 	}
-
+	fmt.Println(query)
 	rows, err := db.Query(query, filters...)
 	if err != nil {
 		return result, err

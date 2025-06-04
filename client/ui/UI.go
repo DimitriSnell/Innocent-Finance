@@ -90,6 +90,20 @@ func (ui *UIApp) createNewTabPopup() {
 	id := widget.NewEntry()
 	date := widget.NewEntry()
 	date.SetPlaceHolder("ex 2024-10-05")
+	date.Resize(fyne.NewSize(100, 40))
+	date2 := widget.NewEntry()
+	date2.SetPlaceHolder("ex 2024-10-05")
+	date2.Resize(fyne.NewSize(100, 40))
+	date2.Hide()
+	DateOoperatorSelect := widget.NewSelect([]string{"Like", "<", "=", ">", "Between"}, func(selected string) {
+		if selected == "Between" {
+			date2.Show()
+		} else {
+			date2.Hide()
+		}
+
+	})
+	DateOoperatorSelect.Resize(fyne.NewSize(500, 40))
 	description := widget.NewEntry()
 	amountEntry := widget.NewEntry()
 	operatorSelect := widget.NewSelect([]string{"<", "=", ">"}, func(selected string) {
@@ -99,41 +113,52 @@ func (ui *UIApp) createNewTabPopup() {
 
 	// Put amountEntry and operatorSelect side by side
 	amountContainer := container.NewHBox(amountEntry, operatorSelect)
-
+	DateContainer := container.NewGridWithColumns(3, container.NewStack(date), container.NewStack(DateOoperatorSelect), container.NewStack(date2))
 	category := widget.NewEntry()
 	var dialog *widget.PopUp
 
 	form := &widget.Form{
 		Items: []*widget.FormItem{
 			{Text: "ID", Widget: id},
-			{Text: "Date", Widget: date},
+			{Text: "Date", Widget: DateContainer},
 			{Text: "Description", Widget: description},
 			{Text: "Amount", Widget: amountContainer},
 			{Text: "Category", Widget: category},
 		},
 
 		OnSubmit: func() {
-			var amount int64
-			fmt.Sscanf(amountEntry.Text, "%d", &amount)
+			var amount *int64
+			var temp int64
+			fmt.Sscanf(amountEntry.Text, "%d", &temp)
 			// Create TransactionFilterInfo
+			amount = &temp
+			if amountEntry.Text == "" {
+				amount = nil
+			}
 			info := DB.TransactionFilterInfo{
 				ID:          id.Text,
 				Date:        date.Text,
 				Description: description.Text,
-				Amount:      &amount,
+				Amount:      amount,
 				Category:    category.Text,
 				Op:          operatorSelect.Selected,
+				SecondDate:  date2.Text,
+				DateOp:      DateOoperatorSelect.Selected,
+			}
+			if DateOoperatorSelect.Selected == "Between" && (date2.Text == "" || date.Text == "") || (DateOoperatorSelect.Selected == "" && date.Text != "") {
+				fmt.Println("Please pick a second date")
+			} else {
+				// Create new tab
+				newTitle := fmt.Sprintf("Tab %d", len(ui.tabList)+1)
+				newTab := NewTab(info, len(ui.tabList), newTitle)
+				ui.tabMap[newTitle] = newTab
+				ui.tabList = append(ui.tabList, newTab)
+				ui.currentTab = newTitle
+				// Reload UI to rebuild tabs
+				dialog.Hide()
+				ui.LoadDataIntoUI()
 			}
 
-			// Create new tab
-			newTitle := fmt.Sprintf("Tab %d", len(ui.tabList)+1)
-			newTab := NewTab(info, len(ui.tabList), newTitle)
-			ui.tabMap[newTitle] = newTab
-			ui.tabList = append(ui.tabList, newTab)
-			ui.currentTab = newTitle
-			// Reload UI to rebuild tabs
-			dialog.Hide()
-			ui.LoadDataIntoUI()
 		},
 		OnCancel: func() {
 			dialog.Hide()
@@ -144,6 +169,10 @@ func (ui *UIApp) createNewTabPopup() {
 	dialog = widget.NewModalPopUp(container.NewVBox(form), ui.fyneWindow.Canvas())
 	dialog.Resize(fyne.NewSize(400, 300))
 	dialog.Show()
+}
+
+func validateFilterForm() bool {
+	return false
 }
 
 func (ui *UIApp) LoadDataIntoUI() error {
