@@ -11,7 +11,8 @@ type TransactionFilterInfo struct {
 	ID          string
 	Date        string
 	Description string
-	Amount      int64
+	Amount      *int64
+	Op          string
 	Category    string
 }
 
@@ -118,20 +119,25 @@ func QueryTransaction(info TransactionFilterInfo) ([]account.Transaction, error)
 		filters = append(filters, info.ID)
 	}
 	if info.Date != "" {
-		filters2 = append(filters2, "date = ?")
-		filters = append(filters, info.Date)
+		filters2 = append(filters2, "date LIKE ?")
+		filters = append(filters, "%"+info.Date+"%")
 	}
 	if info.Description != "" {
-		filters2 = append(filters2, "description = ?")
-		filters = append(filters, info.Description)
+		filters2 = append(filters2, "description LIKE ?")
+		filters = append(filters, "%"+info.Description+"%")
 	}
-	if info.Amount != 0 {
-		filters2 = append(filters2, "amount = ?")
-		filters = append(filters, info.Amount)
+	if info.Amount != nil {
+		if info.Op == "" {
+			filters2 = append(filters2, "amount = ?")
+			filters = append(filters, info.Amount)
+		} else {
+			filters2 = append(filters2, "amount "+info.Op+" ?")
+			filters = append(filters, info.Amount)
+		}
 	}
 	if info.Category != "" {
-		filters2 = append(filters2, "category = ?")
-		filters = append(filters, info.Category)
+		filters2 = append(filters2, "category LIKE ?")
+		filters = append(filters, "%"+info.Category+"%")
 	}
 	//TODO: make it so amount can be greater less than or equal to
 	query := `SELECT id, date, description, amount, category FROM transactions `

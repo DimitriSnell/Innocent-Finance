@@ -37,7 +37,7 @@ func (t *tab) CreateAndReturnUIContext() (*fyne.Container, *widget.List, error) 
 		layout.NewSpacer(),
 		widget.NewLabelWithStyle("Category", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		layout.NewSpacer(),
-		widget.NewLabelWithStyle("Ammount", fyne.TextAlignTrailing, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("Amount", fyne.TextAlignTrailing, fyne.TextStyle{Bold: true}),
 		layout.NewSpacer(),
 		widget.NewLabelWithStyle("Date", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		layout.NewSpacer(),

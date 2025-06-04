@@ -34,7 +34,6 @@ func main() {
 	fmt.Println(client)
 	fmt.Println(client.CheckServerSync())
 	Tlist := []account.Transaction{}
-	Tlist = append(Tlist, account.NewTransaction("2023-10-01", "Test Transaction345345", 6030, "Test Category"))
 	client.AddTransactions(Tlist)
 	DeleteList := []account.Transaction{}
 	toDelete, err := DB.QueryTransactionByUID("9a908847-7d77-4e67-ae63-c433d7449c9f")
@@ -48,11 +47,13 @@ func main() {
 	fmt.Println(client.CheckServerSync())
 	client.SyncServer()
 	//UI := ui.NewUIApp(a)
+	var amount int64
+	amount = 100
 	info := DB.TransactionFilterInfo{
 		ID:          "",
 		Date:        "",
 		Description: "",
-		Amount:      100,
+		Amount:      &amount,
 		Category:    "",
 	}
 	err = client.QueryTransactionsAndUpdate(info)

@@ -62,11 +62,13 @@ func NewUIApp(a AccountInterface) *UIApp {
 	result.tabMap["base tab"] = baseStruct
 	result.currentTab = "base tab"
 	result.tabList = append(result.tabList, baseStruct)
+	var amount int64
+	amount = 100
 	info := DB.TransactionFilterInfo{
 		ID:          "",
 		Date:        "",
 		Description: "",
-		Amount:      100,
+		Amount:      &amount,
 		Category:    "",
 	}
 	baseStruct2 := NewTab(info, 0, "base tab2")
@@ -84,45 +86,113 @@ func (ui *UIApp) StartApp() {
 	ui.fyneWindow.ShowAndRun()
 }
 
-func (ui *UIApp) LoadDataIntoUI() error {
+func (ui *UIApp) createNewTabPopup() {
+	id := widget.NewEntry()
+	date := widget.NewEntry()
+	date.SetPlaceHolder("ex 2024-10-05")
+	description := widget.NewEntry()
+	amountEntry := widget.NewEntry()
+	operatorSelect := widget.NewSelect([]string{"<", "=", ">"}, func(selected string) {
+		fmt.Println("Operator selected:", selected)
+	})
+	operatorSelect.SetSelected("=") // default operator
 
-	/*tabs := container.NewHBox(
-		widget.NewButton("All", func() {
-			fmt.Println("All clicked")
-			// You can update the list content here
-		}),
-		widget.NewButton("Expenses", func() {
-			fmt.Println("Expenses clicked")
-		}),
-		widget.NewButton("Income", func() {
-			fmt.Println("Income clicked")
-		}),
-	)*/
+	// Put amountEntry and operatorSelect side by side
+	amountContainer := container.NewHBox(amountEntry, operatorSelect)
+
+	category := widget.NewEntry()
+	var dialog *widget.PopUp
+
+	form := &widget.Form{
+		Items: []*widget.FormItem{
+			{Text: "ID", Widget: id},
+			{Text: "Date", Widget: date},
+			{Text: "Description", Widget: description},
+			{Text: "Amount", Widget: amountContainer},
+			{Text: "Category", Widget: category},
+		},
+
+		OnSubmit: func() {
+			var amount int64
+			fmt.Sscanf(amountEntry.Text, "%d", &amount)
+			// Create TransactionFilterInfo
+			info := DB.TransactionFilterInfo{
+				ID:          id.Text,
+				Date:        date.Text,
+				Description: description.Text,
+				Amount:      &amount,
+				Category:    category.Text,
+				Op:          operatorSelect.Selected,
+			}
+
+			// Create new tab
+			newTitle := fmt.Sprintf("Tab %d", len(ui.tabList)+1)
+			newTab := NewTab(info, len(ui.tabList), newTitle)
+			ui.tabMap[newTitle] = newTab
+			ui.tabList = append(ui.tabList, newTab)
+			ui.currentTab = newTitle
+			// Reload UI to rebuild tabs
+			dialog.Hide()
+			ui.LoadDataIntoUI()
+		},
+		OnCancel: func() {
+			dialog.Hide()
+		},
+		SubmitText: "Create",
+		CancelText: "Cancel",
+	}
+	dialog = widget.NewModalPopUp(container.NewVBox(form), ui.fyneWindow.Canvas())
+	dialog.Resize(fyne.NewSize(400, 300))
+	dialog.Show()
+}
+
+func (ui *UIApp) LoadDataIntoUI() error {
 
 	var tabBarItems []*container.TabItem
 	for _, t := range ui.tabList {
 		tabBarItems = append(tabBarItems, container.NewTabItem(t.title, widget.NewLabel("test")))
 	}
+	// Add a final tab with a "+" button for adding a new tab
+	addTabButton := widget.NewButton("+", func() {
+		// Optionally add logic to create a new tab dynamically here
+	})
+	addTabButtonTab := container.NewTabItem("+", container.NewCenter(addTabButton))
+	tabBarItems = append(tabBarItems, addTabButtonTab)
+
 	tabs := container.NewAppTabs(tabBarItems...)
 	header, list, err := ui.tabMap[ui.currentTab].CreateAndReturnUIContext()
 	tabs.SetTabLocation(container.TabLocationTop)
+	//sets selected tab to current tab needed for when creating a new tab
+	for i, t := range ui.tabList {
+		if t.title == ui.currentTab {
+			tabs.SelectIndex(i)
+			break
+		}
+	}
+
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
 	tabs.OnSelected = func(tab *container.TabItem) {
 		tabString := string(tab.Text)
+		if tabString == "+" {
+			fmt.Println("Add new tab clicked")
+			ui.createNewTabPopup()
+			for i, t := range ui.tabList {
+				if t.title == ui.currentTab {
+					tabs.SelectIndex(i)
+					break
+				}
+			}
+			return
+		}
 		ui.currentTab = tabString
 		fmt.Println(ui.currentTab)
 		header, list, err = ui.tabMap[ui.currentTab].CreateAndReturnUIContext()
 		content := container.NewVScroll(list)
 		content.SetMinSize(fyne.NewSize(200, 200))
 		fixedHeightContainer := container.NewVBox(tabs, header, content)
-		fmt.Println(fixedHeightContainer)
-		//rect := canvas.NewRectangle(color.Transparent)
-		//wrapped := NewRightClickLabel(rect, func() {
-		//	fmt.Println("Right click detected on window!")
-		//})
 		minWidthRect := canvas.NewRectangle(color.Transparent)
 		minWidthRect.SetMinSize(fyne.NewSize(250, 10)) // 300px wide, 10px tall
 		leftPanel := container.NewVBox(
@@ -131,12 +201,9 @@ func (ui *UIApp) LoadDataIntoUI() error {
 			layout.NewSpacer(), // This makes the left panel expand to fill available space
 		)
 		// Create split container
-
 		split := container.NewHSplit(leftPanel, fixedHeightContainer)
 		split.SetOffset(0.2)
 		split.Refresh()
-		//allin := container.NewStack(wrapped, split)
-		//ui.fyneWindow.Resize(fyne.NewSize(900, 600)) // Make sure window is big enough
 		ui.fyneWindow.SetContent(split)
 	}
 	//vscroll first is necessary for some reason

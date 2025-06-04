@@ -243,7 +243,7 @@ func (c *Client) QueryTransactionsAndUpdate(info DB.TransactionFilterInfo) error
 		filters2 = append(filters2, "description = ?")
 		filters = append(filters, info.Description)
 	}
-	if info.Amount != 0 {
+	if info.Amount != nil {
 		filters2 = append(filters2, "amount = ?")
 		filters = append(filters, info.Amount)
 	}
