@@ -216,9 +216,16 @@ func (ui *UIApp) LoadDataIntoUI() error {
 			}
 			return
 		}
+		ui.tabMap[ui.currentTab].SetOffset(list.GetScrollOffset())
+
+		//set new tab
 		ui.currentTab = tabString
 		fmt.Println(ui.currentTab)
 		header, list, err = ui.tabMap[ui.currentTab].CreateAndReturnUIContext()
+		if err != nil {
+			fmt.Println("ERROR CREATING UI CONTEXT")
+			return
+		}
 		content := container.NewVScroll(list)
 		content.SetMinSize(fyne.NewSize(200, 200))
 		fixedHeightContainer := container.NewVBox(tabs, header, content)
@@ -229,6 +236,13 @@ func (ui *UIApp) LoadDataIntoUI() error {
 			widget.NewLabel("Left Panel"),
 			layout.NewSpacer(), // This makes the left panel expand to fill available space
 		)
+		//set scroll offset to bottom then check if theres a scroll position saved
+		totalHeight := float32(list.Length()) * list.MinSize().Height
+		list.ScrollToOffset(totalHeight)
+		if ui.tabMap[ui.currentTab].GetOffset() != -1 {
+			list.ScrollToOffset(ui.tabMap[ui.currentTab].GetOffset())
+		}
+
 		// Create split container
 		split := container.NewHSplit(leftPanel, fixedHeightContainer)
 		split.SetOffset(0.2)

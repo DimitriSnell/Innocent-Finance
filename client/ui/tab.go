@@ -16,6 +16,7 @@ type tab struct {
 	num    int
 	title  string
 	Filter DB.TransactionFilterInfo
+	offset float32
 }
 
 func NewTab(F DB.TransactionFilterInfo, n int, t string) *tab {
@@ -23,9 +24,17 @@ func NewTab(F DB.TransactionFilterInfo, n int, t string) *tab {
 	result.num = n
 	result.title = t
 	result.Filter = F
+	result.offset = -1
 	return result
 }
 
+func (t *tab) SetOffset(o float32) {
+	t.offset = o
+}
+
+func (t *tab) GetOffset() float32 {
+	return t.offset
+}
 func (t *tab) CreateAndReturnUIContext() (*fyne.Container, *widget.List, error) {
 	transactionList, err := DB.QueryTransaction(t.Filter)
 	if err != nil {
