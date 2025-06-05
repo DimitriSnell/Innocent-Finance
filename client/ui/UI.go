@@ -16,6 +16,7 @@ import (
 
 type AccountInterface interface {
 	GetData() account.Data
+	SetOnSyncStatusChanged(cb func(synced bool))
 }
 
 type UIApp struct {
@@ -26,6 +27,8 @@ type UIApp struct {
 	tabMap     map[string]*tab
 	tabList    []*tab
 	currentTab string
+	isSynced   bool
+	tabs       *container.AppTabs
 }
 
 type RightClickLabel struct {
@@ -52,8 +55,17 @@ func (r *RightClickLabel) CreateRenderer() fyne.WidgetRenderer {
 	return widget.NewSimpleRenderer(r.content)
 }
 
+func (ui *UIApp) GetSynced() bool {
+	return ui.isSynced
+}
+
+func (ui *UIApp) SetSynced(b bool) {
+	ui.isSynced = b
+	ui.LoadDataIntoUI()
+}
+
 func NewUIApp(a AccountInterface) *UIApp {
-	result := UIApp{}
+	result := &UIApp{}
 	result.fyneApp = app.New()
 	result.fyneWindow = result.fyneApp.NewWindow("test")
 	result.accountI = a
@@ -74,7 +86,12 @@ func NewUIApp(a AccountInterface) *UIApp {
 	baseStruct2 := NewTab(info, 0, "base tab2")
 	result.tabMap["base tab2"] = baseStruct2
 	result.tabList = append(result.tabList, baseStruct2)
-	return &result
+	//set callback function
+	a.SetOnSyncStatusChanged(func(b bool) {
+		fmt.Println("TEST FROM CALLBACk")
+		result.SetSynced(b)
+	})
+	return result
 }
 
 func (ui *UIApp) ResizeWindow(width float32, height float32) {
@@ -175,11 +192,61 @@ func validateFilterForm() bool {
 	return false
 }
 
+func (ui *UIApp) RefreshTabContent() {
+	//set new tab
+	var syncText string
+	if ui.GetSynced() {
+		syncText = "Synced with server"
+	} else {
+		syncText = "Not synced"
+	}
+
+	syncStatus := widget.NewLabel(syncText)
+	headerBar := container.NewVBox(syncStatus)
+	fmt.Println(ui.currentTab)
+	header, list, err := ui.tabMap[ui.currentTab].CreateAndReturnUIContext()
+	if err != nil {
+		fmt.Println("ERROR CREATING UI CONTEXT")
+		return
+	}
+	content := container.NewVScroll(list)
+	content.SetMinSize(fyne.NewSize(200, 200))
+	fixedHeightContainer := container.NewVBox(ui.tabs, header, content, headerBar)
+	minWidthRect := canvas.NewRectangle(color.Transparent)
+	minWidthRect.SetMinSize(fyne.NewSize(250, 10)) // 300px wide, 10px tall
+	leftPanel := container.NewVBox(
+		minWidthRect,
+		widget.NewLabel("Left Panel"),
+		layout.NewSpacer(), // This makes the left panel expand to fill available space
+	)
+	//set scroll offset to bottom then check if theres a scroll position saved
+	totalHeight := float32(list.Length()) * list.MinSize().Height
+	list.ScrollToOffset(totalHeight)
+	if ui.tabMap[ui.currentTab].GetOffset() != -1 {
+		list.ScrollToOffset(ui.tabMap[ui.currentTab].GetOffset())
+	}
+
+	// Create split container
+	split := container.NewHSplit(leftPanel, fixedHeightContainer)
+	split.SetOffset(0.2)
+	split.Refresh()
+	ui.fyneWindow.SetContent(split)
+}
+
 func (ui *UIApp) LoadDataIntoUI() error {
+	var syncText string
+	if ui.GetSynced() {
+		syncText = "Synced with server"
+	} else {
+		syncText = "Not synced"
+	}
+
+	syncStatus := widget.NewLabel(syncText)
+	headerBar := container.NewVBox(syncStatus)
 
 	var tabBarItems []*container.TabItem
 	for _, t := range ui.tabList {
-		tabBarItems = append(tabBarItems, container.NewTabItem(t.title, widget.NewLabel("test")))
+		tabBarItems = append(tabBarItems, container.NewTabItem(t.title, container.NewWithoutLayout()))
 	}
 	// Add a final tab with a "+" button for adding a new tab
 	addTabButton := widget.NewButton("+", func() {
@@ -191,6 +258,7 @@ func (ui *UIApp) LoadDataIntoUI() error {
 	tabs := container.NewAppTabs(tabBarItems...)
 	header, list, err := ui.tabMap[ui.currentTab].CreateAndReturnUIContext()
 	tabs.SetTabLocation(container.TabLocationTop)
+	ui.tabs = tabs
 	//sets selected tab to current tab needed for when creating a new tab
 	for i, t := range ui.tabList {
 		if t.title == ui.currentTab {
@@ -217,47 +285,15 @@ func (ui *UIApp) LoadDataIntoUI() error {
 			return
 		}
 		ui.tabMap[ui.currentTab].SetOffset(list.GetScrollOffset())
-
-		//set new tab
 		ui.currentTab = tabString
-		fmt.Println(ui.currentTab)
-		header, list, err = ui.tabMap[ui.currentTab].CreateAndReturnUIContext()
-		if err != nil {
-			fmt.Println("ERROR CREATING UI CONTEXT")
-			return
-		}
-		content := container.NewVScroll(list)
-		content.SetMinSize(fyne.NewSize(200, 200))
-		fixedHeightContainer := container.NewVBox(tabs, header, content)
-		minWidthRect := canvas.NewRectangle(color.Transparent)
-		minWidthRect.SetMinSize(fyne.NewSize(250, 10)) // 300px wide, 10px tall
-		leftPanel := container.NewVBox(
-			minWidthRect,
-			widget.NewLabel("Left Panel"),
-			layout.NewSpacer(), // This makes the left panel expand to fill available space
-		)
-		//set scroll offset to bottom then check if theres a scroll position saved
-		totalHeight := float32(list.Length()) * list.MinSize().Height
-		list.ScrollToOffset(totalHeight)
-		if ui.tabMap[ui.currentTab].GetOffset() != -1 {
-			list.ScrollToOffset(ui.tabMap[ui.currentTab].GetOffset())
-		}
-
-		// Create split container
-		split := container.NewHSplit(leftPanel, fixedHeightContainer)
-		split.SetOffset(0.2)
-		split.Refresh()
-		ui.fyneWindow.SetContent(split)
+		ui.RefreshTabContent()
 	}
+
 	//vscroll first is necessary for some reason
 	content := container.NewVScroll(list)
 	content.SetMinSize(fyne.NewSize(200, 200))
-	fixedHeightContainer := container.NewVBox(tabs, header, content)
+	fixedHeightContainer := container.NewVBox(tabs, header, content, headerBar)
 	fmt.Println(fixedHeightContainer)
-	//rect := canvas.NewRectangle(color.Transparent)
-	//wrapped := NewRightClickLabel(rect, func() {
-	//	fmt.Println("Right click detected on window!")
-	//})
 	minWidthRect := canvas.NewRectangle(color.Transparent)
 	minWidthRect.SetMinSize(fyne.NewSize(250, 10)) // 300px wide, 10px tall
 	leftPanel := container.NewVBox(

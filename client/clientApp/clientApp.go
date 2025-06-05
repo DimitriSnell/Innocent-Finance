@@ -44,6 +44,10 @@ func NewClient() (*Client, error) {
 	return &result, nil
 }
 
+func (c *Client) ClearChanges() {
+	c.a.ClearChanges()
+}
+
 func (c *Client) DeleteTransactions(transactionList []account.Transaction) error {
 	stmt, err := c.db.Prepare("DELETE FROM transactions WHERE id = ?")
 	if err != nil {
@@ -60,6 +64,8 @@ func (c *Client) DeleteTransactions(transactionList []account.Transaction) error
 		fmt.Println("IN DELETE TRANSACTION2")
 		c.a.DeleteTransactionFromMemory(t)
 	}
+	//run callback to set sync status false
+	c.a.MarkUnsynced()
 	return nil
 }
 
@@ -79,6 +85,8 @@ func (c *Client) AddTransactions(transactionList []account.Transaction) error {
 	for _, t := range c.GetAccount().GetData().Transactions {
 		fmt.Println(t)
 	}
+	//run callback to set sync status false
+	c.a.MarkUnsynced()
 	return nil
 }
 
@@ -140,6 +148,7 @@ func (c *Client) SyncServer() error {
 	//c.a.SetData(updatedServerData)
 
 	WriteDataToFile(c.a.GetData(), "data/data.json")
+	c.a.NotifySyncStatusChanged(true)
 	return nil
 }
 
@@ -166,6 +175,7 @@ func (c *Client) pushToSync(data account.Data, changes account.Changes) (account
 		return account.Data{}, err
 	}
 	c.a.SetSyncToken(st)
+	c.ClearChanges()
 	return result, nil
 }
 

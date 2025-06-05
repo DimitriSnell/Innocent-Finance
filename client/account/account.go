@@ -12,8 +12,9 @@ type Data struct {
 }
 
 type Account struct {
-	data    Data
-	changes Changes
+	data                Data
+	changes             Changes
+	onSyncStatusChanged func(synced bool) //callback function for view
 }
 
 type Changes struct {
@@ -63,4 +64,24 @@ func (a *Account) GetChanges() Changes {
 
 func (a *Account) SetTransactionData(Tlist []Transaction) {
 	a.data.Transactions = Tlist
+}
+
+func (a *Account) ClearChanges() {
+	a.changes = Changes{}
+}
+
+func (a *Account) MarkUnsynced() {
+	if a.onSyncStatusChanged != nil {
+		a.onSyncStatusChanged(false)
+	}
+}
+
+func (a *Account) SetOnSyncStatusChanged(cb func(synced bool)) {
+	a.onSyncStatusChanged = cb
+}
+
+func (a *Account) NotifySyncStatusChanged(b bool) {
+	if a.onSyncStatusChanged != nil {
+		a.onSyncStatusChanged(b)
+	}
 }
