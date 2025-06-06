@@ -16,6 +16,7 @@ type TransactionFilterInfo struct {
 	Amount      *int64
 	Op          string
 	Category    string
+	DonatorID   string
 }
 
 func InitDatabase(data account.Data) (*sql.DB, error) {
@@ -29,14 +30,23 @@ func InitDatabase(data account.Data) (*sql.DB, error) {
         date TEXT,
         description TEXT,
         amount INT,
-		category TEXT
+		category TEXT,
+		donatorid TEXT
     );`
 
 	_, err = db.Exec(createTableSQL)
 	if err != nil {
 		return nil, err
 	}
-
+	createTableSQL = `
+    CREATE TABLE IF NOT EXISTS donators (
+        id TEXT PRIMARY KEY,
+        name TEXT
+    );`
+	_, err = db.Exec(createTableSQL)
+	if err != nil {
+		return nil, err
+	}
 	err = SaveDataToDB(db, data)
 	return db, err
 }
@@ -54,16 +64,33 @@ func SaveDataToDB(db *sql.DB, data account.Data) error {
 		tx.Rollback()
 		return err
 	}
+	_, err = tx.Exec("DELETE FROM donators")
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
 	//TODO add other parts of data like balance and syncToken
-	stmt, err := tx.Prepare("INSERT INTO transactions(id, date, description, amount, category) VALUES (?,?,?,?,?)")
+	stmt, err := tx.Prepare("INSERT INTO transactions(id, date, description, amount, category, donatorid) VALUES (?,?,?,?,?,?)")
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 	defer stmt.Close()
 	for _, t := range data.Transactions {
-		_, err := stmt.Exec(t.ID, t.Date, t.Description, t.Amount, t.Category)
+		_, err := stmt.Exec(t.ID, t.Date, t.Description, t.Amount, t.Category, t.DonatorID)
 		fmt.Println("adding", t)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	stmt, err = tx.Prepare("INSERT INTO donators(id, name) VALUES (?,?)")
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	for _, d := range data.Donators {
+		_, err := stmt.Exec(d.ID, d.Name)
 		if err != nil {
 			tx.Rollback()
 			return err
@@ -79,7 +106,7 @@ func QueryTransactionByUID(UID string) (account.Transaction, error) {
 		return result, err
 	}
 	defer db.Close()
-	query := `SELECT id, date, description, amount, category FROM transactions WHERE id = ?`
+	query := `SELECT id, date, description, amount, category, donatorid FROM transactions WHERE id = ?`
 	rows, err := db.Query(query, UID)
 	if err != nil {
 		return result, err
@@ -95,12 +122,17 @@ func QueryTransactionByUID(UID string) (account.Transaction, error) {
 		var description string
 		var amount int64
 		var category string
+		var donatorid string
 
-		err := rows.Scan(&id, &date, &description, &amount, &category)
+		err := rows.Scan(&id, &date, &description, &amount, &category, &donatorid)
 		if err != nil {
 			return result, err
 		}
-		result = account.NewTransaction(date, description, amount, category)
+
+		if donatorid == "" {
+			donatorid = "anonymous"
+		}
+		result = account.NewTransaction(date, description, amount, category, donatorid)
 		result.ID = id
 	}
 	return result, nil
@@ -150,8 +182,12 @@ func QueryTransaction(info TransactionFilterInfo) ([]account.Transaction, error)
 		filters2 = append(filters2, "category LIKE ?")
 		filters = append(filters, "%"+info.Category+"%")
 	}
+	if info.DonatorID != "" {
+		filters2 = append(filters2, "donatorid = ?")
+		filters = append(filters, info.DonatorID)
+	}
 	//TODO: make it so amount can be greater less than or equal to
-	query := `SELECT id, date, description, amount, category FROM transactions `
+	query := `SELECT id, date, description, amount, category, donatorid FROM transactions `
 	if len(filters2) > 0 {
 		query += "WHERE " + strings.Join(filters2, " AND ")
 	}
@@ -166,9 +202,10 @@ func QueryTransaction(info TransactionFilterInfo) ([]account.Transaction, error)
 		var description string
 		var amount int64
 		var category string
+		var donatorid string
 
-		rows.Scan(&id, &date, &description, &amount, &category)
-		t := account.NewTransaction(date, description, amount, category)
+		rows.Scan(&id, &date, &description, &amount, &category, &donatorid)
+		t := account.NewTransaction(date, description, amount, category, donatorid)
 		result = append(result, t)
 	}
 	return result, nil

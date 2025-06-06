@@ -8,20 +8,22 @@ type Transaction struct {
 	Description string `json:"description"`
 	Amount      int64  `json:"amount"`
 	Category    string `json:"category"`
+	DonatorID   string `json:"donatorid"`
 }
 
-func NewTransaction(date, description string, amount int64, category string) Transaction {
-	id := generateID()
+func NewTransaction(date, description string, amount int64, category string, DID string) Transaction {
+	id := GenerateID()
 	return Transaction{
 		ID:          id,
 		Date:        date,
 		Description: description,
 		Amount:      amount,
 		Category:    category,
+		DonatorID:   DID,
 	}
 }
 
-func generateID() string {
+func GenerateID() string {
 	return uuid.New().String()
 }
 

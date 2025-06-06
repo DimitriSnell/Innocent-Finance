@@ -70,22 +70,35 @@ func (c *Client) DeleteTransactions(transactionList []account.Transaction) error
 }
 
 func (c *Client) AddTransactions(transactionList []account.Transaction) error {
-	stmt, err := c.db.Prepare("INSERT INTO transactions(id, date, description, amount, category) VALUES (?,?,?,?,?)")
+	stmt, err := c.db.Prepare("INSERT INTO transactions(id, date, description, amount, category, donatorid) VALUES (?,?,?,?,?,?)")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 	for _, t := range transactionList {
-		_, err := stmt.Exec(t.ID, t.Date, t.Description, t.Amount, t.Category)
+		_, err := stmt.Exec(t.ID, t.Date, t.Description, t.Amount, t.Category, t.DonatorID)
 		if err != nil {
 			return err
 		}
 		c.a.AppendTransaction(t)
 	}
-	for _, t := range c.GetAccount().GetData().Transactions {
-		fmt.Println(t)
-	}
 	//run callback to set sync status false
+	c.a.MarkUnsynced()
+	return nil
+}
+
+func (c *Client) AddDonators(donatorList []account.Donator) error {
+	stmt, err := c.db.Prepare("INSERT INTO donators(id, name) VALUES (?,?)")
+	if err != nil {
+		return err
+	}
+	for _, d := range donatorList {
+		_, err := stmt.Exec(d.ID, d.Name)
+		if err != nil {
+			return err
+		}
+		c.a.AppendDonator(&d)
+	}
 	c.a.MarkUnsynced()
 	return nil
 }
@@ -261,6 +274,10 @@ func (c *Client) QueryTransactionsAndUpdate(info DB.TransactionFilterInfo) error
 		filters2 = append(filters2, "category = ?")
 		filters = append(filters, info.Category)
 	}
+	if info.DonatorID != "" {
+		filters2 = append(filters2, "donatorid = ?")
+		filters = append(filters, info.DonatorID)
+	}
 	//TODO: make it so amount can be greater less than or equal to
 	query := `SELECT id, date, description, amount, category FROM transactions `
 	query += "WHERE " + strings.Join(filters2, " AND ")
@@ -276,9 +293,10 @@ func (c *Client) QueryTransactionsAndUpdate(info DB.TransactionFilterInfo) error
 		var description string
 		var amount int64
 		var category string
+		var donatorid string
 
-		rows.Scan(&id, &date, &description, &amount, &category)
-		t := account.NewTransaction(date, description, amount, category)
+		rows.Scan(&id, &date, &description, &amount, &category, &donatorid)
+		t := account.NewTransaction(date, description, amount, category, donatorid)
 		NewTransactionList = append(NewTransactionList, t)
 	}
 	fmt.Println("NEW TRANSACTION LIST")

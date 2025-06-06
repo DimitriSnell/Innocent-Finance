@@ -17,6 +17,7 @@ import (
 type AccountInterface interface {
 	GetData() account.Data
 	SetOnSyncStatusChanged(cb func(synced bool))
+	GetDonatorNameByID(id string) string
 }
 
 type UIApp struct {
@@ -91,6 +92,7 @@ func NewUIApp(a AccountInterface) *UIApp {
 		fmt.Println("TEST FROM CALLBACk")
 		result.SetSynced(b)
 	})
+	result.fyneWindow.Resize(fyne.NewSize(1200, 600))
 	return result
 }
 
@@ -204,16 +206,16 @@ func (ui *UIApp) RefreshTabContent() {
 	syncStatus := widget.NewLabel(syncText)
 	headerBar := container.NewVBox(syncStatus)
 	fmt.Println(ui.currentTab)
-	header, list, err := ui.tabMap[ui.currentTab].CreateAndReturnUIContext()
+	header, list, err := ui.tabMap[ui.currentTab].CreateAndReturnUIContext(ui.accountI)
 	if err != nil {
 		fmt.Println("ERROR CREATING UI CONTEXT")
 		return
 	}
 	content := container.NewVScroll(list)
-	content.SetMinSize(fyne.NewSize(200, 200))
+	content.SetMinSize(fyne.NewSize(1200, 600))
 	fixedHeightContainer := container.NewVBox(ui.tabs, header, content, headerBar)
 	minWidthRect := canvas.NewRectangle(color.Transparent)
-	minWidthRect.SetMinSize(fyne.NewSize(250, 10)) // 300px wide, 10px tall
+	minWidthRect.SetMinSize(fyne.NewSize(350, 10)) // 300px wide, 10px tall
 	leftPanel := container.NewVBox(
 		minWidthRect,
 		widget.NewLabel("Left Panel"),
@@ -231,6 +233,7 @@ func (ui *UIApp) RefreshTabContent() {
 	split.SetOffset(0.2)
 	split.Refresh()
 	ui.fyneWindow.SetContent(split)
+	ui.fyneWindow.Resize(fyne.NewSize(1200, 600)) // Make sure window is big enough
 }
 
 func (ui *UIApp) LoadDataIntoUI() error {
@@ -256,7 +259,7 @@ func (ui *UIApp) LoadDataIntoUI() error {
 	tabBarItems = append(tabBarItems, addTabButtonTab)
 
 	tabs := container.NewAppTabs(tabBarItems...)
-	header, list, err := ui.tabMap[ui.currentTab].CreateAndReturnUIContext()
+	header, list, err := ui.tabMap[ui.currentTab].CreateAndReturnUIContext(ui.accountI)
 	tabs.SetTabLocation(container.TabLocationTop)
 	ui.tabs = tabs
 	//sets selected tab to current tab needed for when creating a new tab
@@ -274,7 +277,6 @@ func (ui *UIApp) LoadDataIntoUI() error {
 	tabs.OnSelected = func(tab *container.TabItem) {
 		tabString := string(tab.Text)
 		if tabString == "+" {
-			fmt.Println("Add new tab clicked")
 			ui.createNewTabPopup()
 			for i, t := range ui.tabList {
 				if t.title == ui.currentTab {
@@ -291,11 +293,11 @@ func (ui *UIApp) LoadDataIntoUI() error {
 
 	//vscroll first is necessary for some reason
 	content := container.NewVScroll(list)
-	content.SetMinSize(fyne.NewSize(200, 200))
+	content.SetMinSize(fyne.NewSize(1200, 600))
 	fixedHeightContainer := container.NewVBox(tabs, header, content, headerBar)
 	fmt.Println(fixedHeightContainer)
 	minWidthRect := canvas.NewRectangle(color.Transparent)
-	minWidthRect.SetMinSize(fyne.NewSize(250, 10)) // 300px wide, 10px tall
+	minWidthRect.SetMinSize(fyne.NewSize(350, 200)) // 300px wide, 10px tall
 	leftPanel := container.NewVBox(
 		minWidthRect,
 		widget.NewLabel("Left Panel"),
@@ -307,7 +309,7 @@ func (ui *UIApp) LoadDataIntoUI() error {
 	split.SetOffset(0.2)
 	split.Refresh()
 	//allin := container.NewStack(wrapped, split)
-	ui.fyneWindow.Resize(fyne.NewSize(900, 600)) // Make sure window is big enough
 	ui.fyneWindow.SetContent(split)
+	ui.fyneWindow.Resize(fyne.NewSize(1200, 600)) // Make sure window is big enough
 	return nil
 }

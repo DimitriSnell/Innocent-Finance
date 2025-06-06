@@ -35,23 +35,18 @@ func (t *tab) SetOffset(o float32) {
 func (t *tab) GetOffset() float32 {
 	return t.offset
 }
-func (t *tab) CreateAndReturnUIContext() (*fyne.Container, *widget.List, error) {
+func (t *tab) CreateAndReturnUIContext(ai AccountInterface) (*fyne.Container, *widget.List, error) {
 	transactionList, err := DB.QueryTransaction(t.Filter)
 	if err != nil {
 		return nil, nil, err
 	}
-	fmt.Println("length")
-	fmt.Println(len(transactionList))
-	header := container.NewGridWithColumns(9,
-		layout.NewSpacer(),
+	header := container.New(layout.NewGridLayoutWithColumns(6),
+		widget.NewLabel(""),
 		widget.NewLabelWithStyle("Category", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		layout.NewSpacer(),
-		widget.NewLabelWithStyle("Amount", fyne.TextAlignTrailing, fyne.TextStyle{Bold: true}),
-		layout.NewSpacer(),
+		widget.NewLabelWithStyle("Amount", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		widget.NewLabelWithStyle("Date", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		layout.NewSpacer(),
-		widget.NewLabelWithStyle("Description", fyne.TextAlignTrailing, fyne.TextStyle{Bold: true}),
-		layout.NewSpacer(),
+		widget.NewLabelWithStyle("Description", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("Donator", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 	)
 
 	list := widget.NewList(
@@ -59,16 +54,14 @@ func (t *tab) CreateAndReturnUIContext() (*fyne.Container, *widget.List, error) 
 			return len(transactionList)
 		},
 		func() fyne.CanvasObject {
-			base := container.NewGridWithColumns(9,
-				layout.NewSpacer(),
+
+			base := container.New(layout.NewGridLayoutWithColumns(6),
+				canvas.NewText("", color.Black), // empty first column
 				canvas.NewText("", color.Black), // Category
-				layout.NewSpacer(),
-				canvas.NewText("", color.Black), // Ammount
-				layout.NewSpacer(),
+				canvas.NewText("", color.Black), // Amount
 				canvas.NewText("", color.Black), // Date
-				layout.NewSpacer(),
 				canvas.NewText("", color.Black), // Description
-				layout.NewSpacer(),
+				canvas.NewText("", color.Black), // Donator
 			)
 			rightClickWrap := NewRightClickLabel(base, func() {
 				fmt.Println("test right click")
@@ -80,24 +73,53 @@ func (t *tab) CreateAndReturnUIContext() (*fyne.Container, *widget.List, error) 
 			rightCickable := co.(*RightClickLabel)
 			items := rightCickable.content.(*fyne.Container).Objects
 			//items := co.(*fyne.Container).Objects
-			if transactionList[li].Amount < 0 {
+			/*if transactionList[li].Amount < 0 {
 				items[1].(*canvas.Text).Color = color.RGBA{R: 255, G: 0, B: 0, A: 255}
+				items[2].(*canvas.Text).Color = color.RGBA{R: 255, G: 0, B: 0, A: 255}
 				items[3].(*canvas.Text).Color = color.RGBA{R: 255, G: 0, B: 0, A: 255}
+				items[4].(*canvas.Text).Color = color.RGBA{R: 255, G: 0, B: 0, A: 255}
 				items[5].(*canvas.Text).Color = color.RGBA{R: 255, G: 0, B: 0, A: 255}
-				items[7].(*canvas.Text).Color = color.RGBA{R: 255, G: 0, B: 0, A: 255}
 			} else {
 				items[1].(*canvas.Text).Color = color.RGBA{R: 42, G: 168, B: 65, A: 255}
+				items[2].(*canvas.Text).Color = color.RGBA{R: 42, G: 168, B: 65, A: 255}
 				items[3].(*canvas.Text).Color = color.RGBA{R: 42, G: 168, B: 65, A: 255}
+				items[4].(*canvas.Text).Color = color.RGBA{R: 42, G: 168, B: 65, A: 255}
 				items[5].(*canvas.Text).Color = color.RGBA{R: 42, G: 168, B: 65, A: 255}
-				items[7].(*canvas.Text).Color = color.RGBA{R: 42, G: 168, B: 65, A: 255}
 			}
 			items[1].(*canvas.Text).Text = transactionList[li].Category
-			items[3].(*canvas.Text).Text = fmt.Sprintf("%d", transactionList[li].Amount)
-			items[5].(*canvas.Text).Text = transactionList[li].Date
-			items[7].(*canvas.Text).Text = transactionList[li].Description
+			items[2].(*canvas.Text).Text = fmt.Sprintf("%d", transactionList[li].Amount)
+			items[3].(*canvas.Text).Text = transactionList[li].Date
+			items[4].(*canvas.Text).Text = transactionList[li].Description
+			items[5].(*canvas.Text).Text = ai.GetDonatorNameByID(transactionList[li].DonatorID)*/
+
+			for _, obj := range items {
+				if t, ok := obj.(*canvas.Text); ok {
+					t.Color = color.Black // default color
+				}
+			}
+
+			if transactionList[li].Amount < 0 {
+				for _, idx := range []int{1, 2, 3, 4, 5} {
+					if t, ok := items[idx].(*canvas.Text); ok {
+						t.Color = color.RGBA{R: 255, G: 0, B: 0, A: 255} // red
+					}
+				}
+			} else {
+				for _, idx := range []int{1, 2, 3, 4, 5} {
+					if t, ok := items[idx].(*canvas.Text); ok {
+						t.Color = color.RGBA{R: 42, G: 168, B: 65, A: 255} // green
+					}
+				}
+			}
+
+			items[1].(*canvas.Text).Text = transactionList[li].Category
+			items[2].(*canvas.Text).Text = fmt.Sprintf("%d", transactionList[li].Amount)
+			items[3].(*canvas.Text).Text = transactionList[li].Date
+			items[4].(*canvas.Text).Text = transactionList[li].Description
+			items[5].(*canvas.Text).Text = ai.GetDonatorNameByID(transactionList[li].DonatorID)
 			// Refresh texts after setting the text
-			for _, idx := range []int{1, 3, 5, 7} {
-				canvas.Refresh(items[idx].(*canvas.Text))
+			for _, idx := range []int{1, 2, 3, 4, 5} {
+				items[idx].Refresh()
 			}
 		},
 	)

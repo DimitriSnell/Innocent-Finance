@@ -34,6 +34,14 @@ func main() {
 	fmt.Println(client)
 	fmt.Println(client.CheckServerSync())
 	Tlist := []account.Transaction{}
+	//testDonator := account.NewDonator("Donald Trump")
+	//testDonator2 := account.NewDonator("Jeff Rogan")
+	//testDonator3 := account.NewDonator("James Rogan")
+	//testDonator4 := account.NewDonator("Josh Rogan")
+	//fmt.Println("DONATOR ID: " + testDonator.ID)
+	//dlist := []account.Donator{testDonator}
+	//Tlist = append(Tlist, account.NewTransaction("2025-06-05", "testing", 20000, "test category", testDonator.ID))
+	//client.AddDonators(dlist)
 	client.AddTransactions(Tlist)
 	DeleteList := []account.Transaction{}
 	toDelete, err := DB.QueryTransactionByUID("9a908847-7d77-4e67-ae63-c433d7449c9f")

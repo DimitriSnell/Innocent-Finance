@@ -95,6 +95,11 @@ func handleSync(w http.ResponseWriter, r *http.Request) {
 		a.data.Transactions = newList
 		a.data.SyncToken++
 	}
+	for _, d := range changes.AddedDonators {
+		a.data.Donators = append(a.data.Donators, d)
+		a.data.SyncToken++
+	}
+
 	writeDataToFile(a.data, dataFile)
 	json.NewEncoder(w).Encode(a.data.SyncToken)
 }

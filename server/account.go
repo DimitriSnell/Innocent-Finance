@@ -6,6 +6,7 @@ type Transaction struct {
 	Description string `json:"description"`
 	Amount      int64  `json:"amount"`
 	Category    string `json:"category"`
+	DonatorID   string `json:"donatorid"`
 }
 
 type Budget struct {
@@ -14,6 +15,7 @@ type Budget struct {
 }
 
 type Data struct {
+	Donators     []Donator     `json:"donators"`
 	Transactions []Transaction `json:"transactions"`
 	Budget       Budget        `json:"budget"`
 	SyncToken    int64         `json:"sync_token"`
@@ -23,6 +25,7 @@ type Changes struct {
 	AddedTransactions    []Transaction `json:"addedTransactions,omitempty"`
 	DeletedTransactions  []Transaction `json:"deletedTransactions,omitempty"`
 	ReplacedTransactions []Transaction `json:"replacedTransactions,omitempty"`
+	AddedDonators        []Donator     `json:"addedDonator,omitempty"`
 }
 
 type Account struct {
