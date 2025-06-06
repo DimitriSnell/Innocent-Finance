@@ -232,8 +232,10 @@ func (ui *UIApp) RefreshTabContent() {
 	split := container.NewHSplit(leftPanel, fixedHeightContainer)
 	split.SetOffset(0.2)
 	split.Refresh()
-	ui.fyneWindow.SetContent(split)
-	ui.fyneWindow.Resize(fyne.NewSize(1200, 600)) // Make sure window is big enough
+	topHeader := widget.NewLabel("test")
+
+	fullContent := container.NewBorder(topHeader, nil, nil, nil, split)
+	ui.fyneWindow.SetContent(fullContent)
 }
 
 func (ui *UIApp) LoadDataIntoUI() error {
@@ -292,9 +294,24 @@ func (ui *UIApp) LoadDataIntoUI() error {
 	}
 
 	//vscroll first is necessary for some reason
-	content := container.NewVScroll(list)
-	content.SetMinSize(fyne.NewSize(1200, 600))
-	fixedHeightContainer := container.NewVBox(tabs, header, content, headerBar)
+	scrollArea := container.NewVScroll(list)
+	scrollArea.SetMinSize(fyne.NewSize(1200, 600))
+
+	mainContent := container.NewBorder(
+		nil,       // no top
+		headerBar, // fixed bottom
+		nil, nil,  // no left/right
+		scrollArea, // this fills the vertical space
+	)
+
+	fixedHeightContainer := container.NewBorder(
+		container.NewVBox(tabs, header), // top fixed
+		nil,                             // bottom fixed (none)
+		nil,                             // left fixed (none)
+		nil,                             // right fixed (none)
+		mainContent,                     // center stretches
+	)
+	//fixedHeightContainer := container.NewVBox(tabs, header, content, headerBar)
 	fmt.Println(fixedHeightContainer)
 	minWidthRect := canvas.NewRectangle(color.Transparent)
 	minWidthRect.SetMinSize(fyne.NewSize(350, 200)) // 300px wide, 10px tall
@@ -309,7 +326,9 @@ func (ui *UIApp) LoadDataIntoUI() error {
 	split.SetOffset(0.2)
 	split.Refresh()
 	//allin := container.NewStack(wrapped, split)
-	ui.fyneWindow.SetContent(split)
-	ui.fyneWindow.Resize(fyne.NewSize(1200, 600)) // Make sure window is big enough
+	topHeader := widget.NewLabel("test")
+
+	fullContent := container.NewBorder(topHeader, nil, nil, nil, split)
+	ui.fyneWindow.SetContent(fullContent)
 	return nil
 }
