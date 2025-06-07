@@ -138,6 +138,32 @@ func QueryTransactionByUID(UID string) (account.Transaction, error) {
 	return result, nil
 }
 
+func QueryDonatorList() ([]account.Donator, error) {
+	var result []account.Donator
+	db, err := sql.Open("sqlite3", "file:transactions.db?cache=shared&mode=rwc")
+	if err != nil {
+		return result, err
+	}
+	query := `SELECT id, name FROM donators`
+	rows, err := db.Query(query)
+	if err != nil {
+		return result, err
+	}
+	for rows.Next() {
+		var id string
+		var name string
+
+		err := rows.Scan(&id, &name)
+		if err != nil {
+			return result, err
+		}
+		d := account.NewDonator(name)
+		d.ID = id
+		result = append(result, d)
+	}
+	return result, nil
+}
+
 func QueryTransaction(info TransactionFilterInfo) ([]account.Transaction, error) {
 	var result []account.Transaction
 	db, err := sql.Open("sqlite3", "file:transactions.db?cache=shared&mode=rwc")

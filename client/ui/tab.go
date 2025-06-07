@@ -12,19 +12,28 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+type ContentType int
+
+const (
+	TransactionType ContentType = iota
+	DonatorType
+)
+
 type tab struct {
 	num    int
 	title  string
 	Filter DB.TransactionFilterInfo
+	cType  ContentType
 	offset float32
 }
 
-func NewTab(F DB.TransactionFilterInfo, n int, t string) *tab {
+func NewTab(F DB.TransactionFilterInfo, n int, t string, ct ContentType) *tab {
 	result := &tab{}
 	result.num = n
 	result.title = t
 	result.Filter = F
 	result.offset = -1
+	result.cType = ct
 	return result
 }
 
@@ -35,7 +44,71 @@ func (t *tab) SetOffset(o float32) {
 func (t *tab) GetOffset() float32 {
 	return t.offset
 }
+
+func (t *tab) SetType(ct ContentType) {
+	t.cType = ct
+}
+
+func (t *tab) GetType() ContentType {
+	return t.cType
+}
+
 func (t *tab) CreateAndReturnUIContext(ai AccountInterface) (*fyne.Container, *widget.List, error) {
+	var cont *fyne.Container
+	var list *widget.List
+	var err error
+	switch t.cType {
+	case TransactionType:
+		cont, list, err = t.CreateTransactionContent(ai)
+	case DonatorType:
+		cont, list, err = t.CreateDonatorContent(ai)
+	}
+	return cont, list, err
+}
+
+func (t *tab) CreateDonatorContent(ai AccountInterface) (*fyne.Container, *widget.List, error) {
+	DonatorList, err := DB.QueryDonatorList()
+	if err != nil {
+		return nil, nil, err
+	}
+	header := container.New(layout.NewAdaptiveGridLayout(3),
+		widget.NewLabel(""),
+		widget.NewLabelWithStyle("Name", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("Amount donated this month", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+	)
+	list := widget.NewList(
+		func() int {
+			return len(DonatorList)
+		},
+		func() fyne.CanvasObject {
+
+			base := container.New(layout.NewGridLayoutWithColumns(3),
+				canvas.NewText("", color.White), // empty first column
+				canvas.NewText("", color.White), // Name
+				canvas.NewText("", color.White), // Amount
+			)
+			rightClickWrap := NewRightClickLabel(base, func() {
+				fmt.Println("test right click")
+			})
+			return rightClickWrap
+		},
+		func(li widget.ListItemID, co fyne.CanvasObject) {
+			//co.(*widget.Label).SetText(fmt.Sprintf("Category: %s, Date: %s, Ammount: %d, Description: %s", transactionList[li].Category, transactionList[li].Date, transactionList[li].Amount, transactionList[li].Description))
+			rightCickable := co.(*RightClickLabel)
+			items := rightCickable.content.(*fyne.Container).Objects
+
+			items[1].(*canvas.Text).Text = DonatorList[li].Name
+			if DonatorList[li].Name == "" {
+				items[1].(*canvas.Text).Text = "Unknown"
+			}
+			items[2].(*canvas.Text).Text = "Not Available"
+			// Refresh texts after setting the text
+		},
+	)
+	return header, list, nil
+}
+
+func (t *tab) CreateTransactionContent(ai AccountInterface) (*fyne.Container, *widget.List, error) {
 	transactionList, err := DB.QueryTransaction(t.Filter)
 	if err != nil {
 		return nil, nil, err

@@ -21,15 +21,16 @@ type AccountInterface interface {
 }
 
 type UIApp struct {
-	fyneWindow fyne.Window
-	fyneApp    fyne.App
-	accountI   AccountInterface
-	Width      float32
-	tabMap     map[string]*tab
-	tabList    []*tab
-	currentTab string
-	isSynced   bool
-	tabs       *container.AppTabs
+	fyneWindow  fyne.Window
+	fyneApp     fyne.App
+	accountI    AccountInterface
+	Width       float32
+	tabMap      map[string]*tab
+	tabList     []*tab
+	currentTab  string
+	isSynced    bool
+	tabs        *container.AppTabs
+	splitOffset *container.Split
 }
 
 type RightClickLabel struct {
@@ -70,7 +71,7 @@ func NewUIApp(a AccountInterface) *UIApp {
 	result.fyneApp = app.New()
 	result.fyneWindow = result.fyneApp.NewWindow("test")
 	result.accountI = a
-	baseStruct := NewTab(DB.TransactionFilterInfo{}, 0, "base tab")
+	baseStruct := NewTab(DB.TransactionFilterInfo{}, 0, "base tab", TransactionType)
 	result.tabMap = make(map[string]*tab)
 	result.tabMap["base tab"] = baseStruct
 	result.currentTab = "base tab"
@@ -84,7 +85,7 @@ func NewUIApp(a AccountInterface) *UIApp {
 		Amount:      &amount,
 		Category:    "",
 	}
-	baseStruct2 := NewTab(info, 0, "base tab2")
+	baseStruct2 := NewTab(info, 0, "base tab2", TransactionType)
 	result.tabMap["base tab2"] = baseStruct2
 	result.tabList = append(result.tabList, baseStruct2)
 	//set callback function
@@ -169,7 +170,7 @@ func (ui *UIApp) createNewTabPopup() {
 			} else {
 				// Create new tab
 				newTitle := fmt.Sprintf("Tab %d", len(ui.tabList)+1)
-				newTab := NewTab(info, len(ui.tabList), newTitle)
+				newTab := NewTab(info, len(ui.tabList), newTitle, TransactionType)
 				ui.tabMap[newTitle] = newTab
 				ui.tabList = append(ui.tabList, newTab)
 				ui.currentTab = newTitle
@@ -209,18 +210,27 @@ func (ui *UIApp) RefreshTabContent() {
 	header, list, err := ui.tabMap[ui.currentTab].CreateAndReturnUIContext(ui.accountI)
 	if err != nil {
 		fmt.Println("ERROR CREATING UI CONTEXT")
+		fmt.Println(err)
 		return
 	}
-	content := container.NewVScroll(list)
-	content.SetMinSize(fyne.NewSize(1200, 600))
-	fixedHeightContainer := container.NewVBox(ui.tabs, header, content, headerBar)
-	minWidthRect := canvas.NewRectangle(color.Transparent)
-	minWidthRect.SetMinSize(fyne.NewSize(350, 10)) // 300px wide, 10px tall
-	leftPanel := container.NewVBox(
-		minWidthRect,
-		widget.NewLabel("Left Panel"),
-		layout.NewSpacer(), // This makes the left panel expand to fill available space
+	scrollArea := container.NewVScroll(list)
+	scrollArea.SetMinSize(fyne.NewSize(1200, 600))
+
+	mainContent := container.NewBorder(
+		nil,       // no top
+		headerBar, // fixed bottom
+		nil, nil,  // no left/right
+		scrollArea, // this fills the vertical space
 	)
+
+	fixedHeightContainer := container.NewBorder(
+		container.NewVBox(ui.tabs, header), // top fixed
+		nil,                                // bottom fixed (none)
+		nil,                                // left fixed (none)
+		nil,                                // right fixed (none)
+		mainContent,                        // center stretches
+	)
+	leftPanel := ui.CreateLeftPanel()
 	//set scroll offset to bottom then check if theres a scroll position saved
 	totalHeight := float32(list.Length()) * list.MinSize().Height
 	list.ScrollToOffset(totalHeight)
@@ -230,7 +240,8 @@ func (ui *UIApp) RefreshTabContent() {
 
 	// Create split container
 	split := container.NewHSplit(leftPanel, fixedHeightContainer)
-	split.SetOffset(0.2)
+	split.SetOffset(ui.splitOffset.Offset)
+	ui.splitOffset = split
 	split.Refresh()
 	topHeader := widget.NewLabel("test")
 
@@ -313,13 +324,7 @@ func (ui *UIApp) LoadDataIntoUI() error {
 	)
 	//fixedHeightContainer := container.NewVBox(tabs, header, content, headerBar)
 	fmt.Println(fixedHeightContainer)
-	minWidthRect := canvas.NewRectangle(color.Transparent)
-	minWidthRect.SetMinSize(fyne.NewSize(350, 200)) // 300px wide, 10px tall
-	leftPanel := container.NewVBox(
-		minWidthRect,
-		widget.NewLabel("Left Panel"),
-		layout.NewSpacer(), // This makes the left panel expand to fill available space
-	)
+	leftPanel := ui.CreateLeftPanel()
 	// Create split container
 
 	split := container.NewHSplit(leftPanel, fixedHeightContainer)
@@ -327,8 +332,32 @@ func (ui *UIApp) LoadDataIntoUI() error {
 	split.Refresh()
 	//allin := container.NewStack(wrapped, split)
 	topHeader := widget.NewLabel("test")
-
+	ui.splitOffset = split
 	fullContent := container.NewBorder(topHeader, nil, nil, nil, split)
 	ui.fyneWindow.SetContent(fullContent)
 	return nil
+}
+
+func (ui *UIApp) CreateLeftPanel() *fyne.Container {
+	minWidthRect := canvas.NewRectangle(color.Transparent)
+	minWidthRect.SetMinSize(fyne.NewSize(50, 200)) // 300px wide, 10px tall
+	leftPanelButtons := container.NewVBox(
+		widget.NewButton("Donation View", func() {
+			ui.tabMap[ui.currentTab].SetType(DonatorType)
+			ui.RefreshTabContent()
+		}),
+		widget.NewButton("Transaction View", func() {
+			ui.tabMap[ui.currentTab].SetType(TransactionType)
+			ui.RefreshTabContent()
+		}),
+		widget.NewButton("Settings", func() {
+			fmt.Println("Settings clicked")
+		}),
+		// Add more buttons here
+	)
+	leftPanel := container.NewVBox(
+		leftPanelButtons,
+		layout.NewSpacer(), // optional: pushes buttons to the top
+	)
+	return leftPanel
 }
