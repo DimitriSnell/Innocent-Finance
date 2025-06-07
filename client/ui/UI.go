@@ -31,6 +31,7 @@ type UIApp struct {
 	isSynced    bool
 	tabs        *container.AppTabs
 	splitOffset *container.Split
+	currentList *widget.List
 }
 
 type RightClickLabel struct {
@@ -208,6 +209,7 @@ func (ui *UIApp) RefreshTabContent() {
 	headerBar := container.NewVBox(syncStatus)
 	fmt.Println(ui.currentTab)
 	header, list, err := ui.tabMap[ui.currentTab].CreateAndReturnUIContext(ui.accountI)
+	ui.currentList = list
 	if err != nil {
 		fmt.Println("ERROR CREATING UI CONTEXT")
 		fmt.Println(err)
@@ -230,7 +232,7 @@ func (ui *UIApp) RefreshTabContent() {
 		nil,                                // right fixed (none)
 		mainContent,                        // center stretches
 	)
-	leftPanel := ui.CreateLeftPanel()
+	leftPanel := ui.CreateLeftPanel(list)
 	//set scroll offset to bottom then check if theres a scroll position saved
 	totalHeight := float32(list.Length()) * list.MinSize().Height
 	list.ScrollToOffset(totalHeight)
@@ -275,6 +277,7 @@ func (ui *UIApp) LoadDataIntoUI() error {
 	header, list, err := ui.tabMap[ui.currentTab].CreateAndReturnUIContext(ui.accountI)
 	tabs.SetTabLocation(container.TabLocationTop)
 	ui.tabs = tabs
+	ui.currentList = list
 	//sets selected tab to current tab needed for when creating a new tab
 	for i, t := range ui.tabList {
 		if t.title == ui.currentTab {
@@ -299,7 +302,7 @@ func (ui *UIApp) LoadDataIntoUI() error {
 			}
 			return
 		}
-		ui.tabMap[ui.currentTab].SetOffset(list.GetScrollOffset())
+		ui.tabMap[ui.currentTab].SetOffset(ui.currentList.GetScrollOffset())
 		ui.currentTab = tabString
 		ui.RefreshTabContent()
 	}
@@ -324,7 +327,7 @@ func (ui *UIApp) LoadDataIntoUI() error {
 	)
 	//fixedHeightContainer := container.NewVBox(tabs, header, content, headerBar)
 	fmt.Println(fixedHeightContainer)
-	leftPanel := ui.CreateLeftPanel()
+	leftPanel := ui.CreateLeftPanel(list)
 	// Create split container
 
 	split := container.NewHSplit(leftPanel, fixedHeightContainer)
@@ -338,12 +341,13 @@ func (ui *UIApp) LoadDataIntoUI() error {
 	return nil
 }
 
-func (ui *UIApp) CreateLeftPanel() *fyne.Container {
+func (ui *UIApp) CreateLeftPanel(list *widget.List) *fyne.Container {
 	minWidthRect := canvas.NewRectangle(color.Transparent)
 	minWidthRect.SetMinSize(fyne.NewSize(50, 200)) // 300px wide, 10px tall
 	leftPanelButtons := container.NewVBox(
 		widget.NewButton("Donation View", func() {
 			ui.tabMap[ui.currentTab].SetType(DonatorType)
+			ui.tabMap[ui.currentTab].SetOffset(list.GetScrollOffset())
 			ui.RefreshTabContent()
 		}),
 		widget.NewButton("Transaction View", func() {
